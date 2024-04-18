@@ -160,22 +160,35 @@ public class MYGUI extends JFrame
         }
     }
 
-    private class AddStopWordActionListener implements ActionListener 
-    {
-        public void actionPerformed(ActionEvent e) 
-        {
-        	
+    private class AddStopWordActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
             String newStopWord = stopWordField.getText().trim(); // gets stop word from user
             
+            // checks if the stop word contains any numbers
+            if (containsNumbers(newStopWord)) {
+                JOptionPane.showMessageDialog(null, "Stop word cannot contain numbers.");
+                return; // exits the the method if stop word contains numbers
+            }
+            
             // checks stop word text box
-            if (!newStopWord.isEmpty()) 
-            {
+            if (!newStopWord.isEmpty()) {
                 addStopWord(newStopWord);// add to the list
                 JOptionPane.showMessageDialog(null, "Stop word added: " + newStopWord);
                 stopWordField.setText("");// clear text field
             }
         }
-    }	
+
+        // check if a string contains numbers
+        private boolean containsNumbers(String str) {
+            for (char c : str.toCharArray()) {
+                if (Character.isDigit(c)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+	
 
     private class CompareFilesActionListener implements ActionListener 
     {
