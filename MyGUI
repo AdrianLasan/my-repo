@@ -1,0 +1,184 @@
+package TopMod;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.*;
+
+public class MYGUI extends JFrame {
+    private JTextArea logArea;
+    private JButton selectFileButton;
+    private JButton addStopWordButton;
+    private JButton compareFilesButton;
+    private JTextField stopWordField;
+    private File[] selectedFiles;
+    private Set<String> stopwords;
+
+    public MYGUI() {
+        setTitle("MYGUI");
+        setSize(500, 400);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        // Create a panel to hold buttons and text field
+        JPanel buttonPanel = new JPanel(new FlowLayout()); // Setting FlowLayout
+        selectFileButton = new JButton("Select Files");
+        selectFileButton.addActionListener(new SelectFileActionListener());
+        buttonPanel.add(selectFileButton);
+
+        stopWordField = new JTextField(15);
+        addStopWordButton = new JButton("Add Stop Word");
+        addStopWordButton.addActionListener(new AddStopWordActionListener());
+        buttonPanel.add(stopWordField);
+        buttonPanel.add(addStopWordButton);
+
+        compareFilesButton = new JButton("Compare Files");
+        compareFilesButton.addActionListener(new CompareFilesActionListener());
+        buttonPanel.add(compareFilesButton);
+
+        JButton clearButton = new JButton("Clear Files");
+        clearButton.addActionListener(new ClearFilesActionListener());
+        buttonPanel.add(clearButton);
+
+        // Create a menu bar
+        JMenuBar menuBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
+        JMenuItem exitMenuItem = new JMenuItem("Exit");
+        exitMenuItem.addActionListener(new ExitActionListener());
+        fileMenu.add(exitMenuItem);
+        menuBar.add(fileMenu);
+        setJMenuBar(menuBar);
+
+        // Create a text area to display logs
+        logArea = new JTextArea();
+        logArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(logArea);
+        add(buttonPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+
+        setVisible(true);
+    }
+
+    // ActionListener for selecting files
+    private class SelectFileActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setMultiSelectionEnabled(true);
+            int returnValue = fileChooser.showOpenDialog(null);
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                selectedFiles = fileChooser.getSelectedFiles();
+                logArea.append("Selected files:\n");
+                for (File file : selectedFiles) {
+                    logArea.append(file.getName() + "\n");
+                }
+            }
+        }
+    }
+
+    // ActionListener for adding a stop word
+    private class AddStopWordActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            String newStopWord = stopWordField.getText().trim();
+            if (!newStopWord.isEmpty()) {
+                addStopWord(newStopWord);
+                stopWordField.setText("");
+                if (selectedFiles != null && selectedFiles.length == 2) {
+                    compareFiles(selectedFiles[0], selectedFiles[1]);
+                }
+            }
+        }
+    }
+
+    // ActionListener for comparing the selected files
+    private class CompareFilesActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            if (selectedFiles != null && selectedFiles.length == 2) {
+                compareFiles(selectedFiles[0], selectedFiles[1]);
+            } else {
+                JOptionPane.showMessageDialog(null, "Please select exactly 2 files to compare.");
+            }
+        }
+    }
+
+    // ActionListener for clearing selected files
+    private class ClearFilesActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            selectedFiles = null;
+            logArea.setText("");
+        }
+    }
+
+    // Function to load stop words from a file
+    private void loadStopwords(String filePath) {
+        stopwords = new HashSet<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stopwords.add(line.trim());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Function to add a stop word to the stop word list
+    private void addStopWord(String newStopWord) {
+        String stopwordsPath = "StopWords.txt";
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(stopwordsPath, true))) {
+            writer.write(newStopWord);
+            writer.newLine();
+            writer.flush();
+            logArea.append("Stop word added: " + newStopWord + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Function to compare two files
+    private void compareFiles(File file1, File file2) {
+        String stopwordsPath = "StopWords.txt";
+        loadStopwords(stopwordsPath);
+
+        try (BufferedReader reader1 = new BufferedReader(new FileReader(file1));
+             BufferedReader reader2 = new BufferedReader(new FileReader(file2))) {
+            Set<String> words1 = preprocessText(reader1.readLine());
+            Set<String> words2 = preprocessText(reader2.readLine());
+
+            Set<String> commonWords = new HashSet<>(words1);
+            commonWords.retainAll(words2);
+
+            double percentageMatch = (double) commonWords.size() / Math.min(words1.size(), words2.size()) * 100;
+            logArea.append(String.format("Percentage of matching words: %.2f%%\n", percentageMatch));
+
+            logArea.append("Common words in the files:\n");
+            for (String word : commonWords) {
+                logArea.append(word + "\n");
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    // Function to preprocess text
+    private Set<String> preprocessText(String text) {
+        Set<String> words = new HashSet<>();
+        for (String word : text.toLowerCase().split("\\s+")) {
+            if (!stopwords.contains(word)) {
+                words.add(word);
+            }
+        }
+        return words;
+    }
+
+    // ActionListener for exiting the application
+    private class ExitActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            System.exit(0);
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(MYGUI::new);
+    }
+}
